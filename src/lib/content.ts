@@ -21,7 +21,7 @@ export interface LearnPageContent {
     subhead: string;
     imageUrl: string;
   };
-  webinar: { title: string; when: string; duration: string; language: string };
+  webinar: { title: string; course: string; when: string; duration: string; language: string };
   form: {
     title: string;
     buttonText: string;
@@ -53,7 +53,7 @@ export const fallbackContent: LearnPageContent = {
     subhead: "Even if you're a fresher with no coding background, or looking to switch careers.",
     imageUrl: "/images/photo-12.jpg",
   },
-  webinar: { title: "Free AI Webinar", when: "Date & time announced soon", duration: "90 minutes", language: "English & Tamil" },
+  webinar: { title: "Free AI Webinar", course: "Free AI Webinar", when: "Date & time announced soon", duration: "90 minutes", language: "English & Tamil" },
   form: {
     title: "Reserve your free seat",
     buttonText: "Register Now — It's Free",
