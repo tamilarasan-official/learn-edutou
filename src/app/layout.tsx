@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Registration | Edutou",
-  description: "Learn to build AI agents and future-ready career skills. Register free for the Edutou live webinar.",
+  title: "Edutou Admin",
+  description: "Content admin for edutou.in.",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
