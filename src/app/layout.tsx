@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Free AI Webinar | Edutou Skill Academy",
+  title: "Registration | Edutou",
   description: "Learn to build AI agents and future-ready career skills. Register free for the Edutou live webinar.",
 };
 

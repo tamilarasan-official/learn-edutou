@@ -41,7 +41,7 @@ export interface LearnPageContent {
 /** Used only if the API cannot be reached, so the page never renders empty. */
 export const fallbackContent: LearnPageContent = {
   seo: {
-    title: "Free AI Webinar | Edutou Skill Academy",
+    title: "Registration | Edutou",
     description: "Learn to build AI agents and future-ready career skills. Register free for the Edutou live webinar.",
   },
   brand: { name: "Edutou", tagline: "Skill Academy", logoUrl: "/logo.jpg" },
