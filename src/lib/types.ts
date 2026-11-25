@@ -48,7 +48,14 @@ export interface ProgrammeData {
   alsoIn: string[];
   domains: string[];
   type: string;
-  pricing: { model: "free" | "paid" | "hidden"; amount: number | null; currency: string; note: string };
+  pricing: {
+    model: "free" | "paid" | "hidden";
+    amount: number | null;
+    currency: "INR" | "USD";
+    showCompareAt: boolean;
+    compareAtAmount: number | null;
+    note: string;
+  };
   enrolment: { whatsappGroupUrl: string; emailNote: string };
   payment: { collectOnline: boolean; provider: string; productRef: string };
   schedule: { startDate: string; time: string; duration: string; mode: string; language: string; seats: number | null };
@@ -131,6 +138,7 @@ export interface Enrolment {
   payment_status: PaymentStatus;
   payment_provider: string | null;
   payment_reference: string | null;
+  razorpay_order_id: string | null;
   paid_at: string | null;
   created_at: string;
   confirmation_email: EmailStatus | null;
@@ -171,9 +179,9 @@ export const emptyProgramme = (category = ""): ProgrammeData => ({
   alsoIn: [],
   domains: [],
   type: "Course",
-  pricing: { model: "free", amount: null, currency: "INR", note: "" },
+  pricing: { model: "free", amount: null, currency: "INR", showCompareAt: false, compareAtAmount: null, note: "" },
   enrolment: { whatsappGroupUrl: "", emailNote: "" },
-  payment: { collectOnline: false, provider: "", productRef: "" },
+  payment: { collectOnline: false, provider: "razorpay", productRef: "" },
   schedule: { startDate: "", time: "", duration: "", mode: "", language: "", seats: null },
   image: { url: "", alt: "", focus: "" },
   card: { meta: [], summary: "", highlights: [], tools: [], details: { enabled: false, roles: [], projects: [], note: "" } },
@@ -208,11 +216,29 @@ export const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   refunded: "Refunded",
 };
 
-export const priceLabel = (p: ProgrammeData["pricing"]) =>
-  p.model === "free"
-    ? "Free"
-    : p.model === "hidden"
-      ? ""
-      : p.amount != null
-        ? new Intl.NumberFormat("en-IN", { style: "currency", currency: p.currency || "INR", maximumFractionDigits: 0 }).format(p.amount)
-        : p.note || "Paid";
+export const formatMoney = (amount: number, currency: string) =>
+  new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-IN", {
+    style: "currency",
+    currency: currency || "INR",
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+  }).format(amount);
+
+/** Badge text: "Free", "₹99", "₹99 (was ₹199)", the note, or "" when hidden. */
+export const priceLabel = (p: ProgrammeData["pricing"]) => {
+  if (p.model === "free") return "Free";
+  if (p.model === "hidden") return "";
+  if (p.amount == null) return p.note || "Paid";
+  const now = formatMoney(p.amount, p.currency);
+  return p.showCompareAt && p.compareAtAmount != null && p.compareAtAmount > p.amount
+    ? `${now} (was ${formatMoney(p.compareAtAmount, p.currency)})`
+    : now;
+};
+
+export interface PaymentsStatus {
+  configured: boolean;
+  mode: "test" | "live" | null;
+  keyId: string;
+  webhookConfigured: boolean;
+  webhookUrl: string;
+  totals: { currency: string; paid: number; amount: string }[];
+}

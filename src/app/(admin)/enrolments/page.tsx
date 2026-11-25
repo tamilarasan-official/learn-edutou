@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorText, json } from "@/lib/api";
-import { PAYMENT_LABEL, STATUS_LABEL, type EmailStatus, type Enrolment, type EnrolmentStatus, type PaymentStatus } from "@/lib/types";
+import { formatMoney, PAYMENT_LABEL, STATUS_LABEL, type EmailStatus, type Enrolment, type EnrolmentStatus, type PaymentStatus } from "@/lib/types";
 import { PageHeader, useAdmin } from "@/components/AdminShell";
 import { Badge, Button, cx, inputClass, Notice, Spinner } from "@/components/ui";
 
@@ -272,11 +272,15 @@ function EnrolmentDetail({
         <Button size="sm" variant="secondary" disabled={notes === r.notes} onClick={() => onUpdate({ notes })}>Save notes</Button>
       </div>
       <div className="space-y-2">
-        <p className="text-xs text-neutral-500">Payment {r.amount ? `· ${r.currency} ${Number(r.amount).toLocaleString("en-IN")}` : ""}</p>
+        <p className="text-xs text-neutral-500">
+          Payment {r.amount ? `· ${formatMoney(Number(r.amount), r.currency ?? "INR")}` : ""}
+          {r.payment_provider === "razorpay" && " · Razorpay"}
+        </p>
+        {r.razorpay_order_id && <p className="break-all text-xs text-neutral-500">Order {r.razorpay_order_id}</p>}
         <select value={r.payment_status} onChange={(e) => onUpdate({ paymentStatus: e.target.value as PaymentStatus })} className={inputClass} aria-label="Payment status">
           {Object.entries(PAYMENT_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Payment reference / receipt no." className={inputClass} />
+        <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Payment reference (Razorpay payment id or receipt no.)" className={inputClass} />
         <div className="flex justify-between">
           <Button size="sm" variant="secondary" disabled={ref === (r.payment_reference ?? "")} onClick={() => onUpdate({ paymentReference: ref })}>Save reference</Button>
           <Button size="sm" variant="danger" onClick={onDelete}>Delete</Button>

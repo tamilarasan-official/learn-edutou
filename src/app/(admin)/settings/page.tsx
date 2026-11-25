@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api, errorText, json, SITE_URL } from "@/lib/api";
-import type { EmailServerStatus, EnrolForm, Notifications } from "@/lib/types";
+import { formatMoney, type EmailServerStatus, type EnrolForm, type Notifications, type PaymentsStatus } from "@/lib/types";
 import { PageHeader, useAdmin } from "@/components/AdminShell";
 import { Badge, Button, Card, inputClass, Notice, Spinner, StringList, Text, Toggle } from "@/components/ui";
 
@@ -12,6 +12,7 @@ export default function EnrolFormSettings() {
   const [notify, setNotify] = useState<Notifications | null>(null);
   const [saved, setSaved] = useState("");
   const [mail, setMail] = useState<EmailServerStatus | null>(null);
+  const [pay, setPay] = useState<PaymentsStatus | null>(null);
   const [testTo, setTestTo] = useState(user.email);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState("");
@@ -24,8 +25,10 @@ export default function EnrolFormSettings() {
       api<{ data: EnrolForm }>("/api/cms/admin/settings/enrol_form"),
       api<{ data: Notifications }>("/api/cms/admin/settings/notifications"),
       api<{ data: EmailServerStatus }>("/api/cms/admin/email/status"),
+      api<{ data: PaymentsStatus }>("/api/cms/admin/payments/status").catch(() => null),
     ])
-      .then(([f, n, m]) => {
+      .then(([f, n, m, p]) => {
+        if (p) setPay(p.data);
         setForm(f.data);
         setNotify(n.data);
         setMail(m.data);
@@ -79,6 +82,46 @@ export default function EnrolFormSettings() {
       />
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
       {notice && <div className="mb-4"><Notice tone="success">{notice}</Notice></div>}
+
+      <Card
+        title="Payments (Razorpay)"
+        className="mb-6"
+        actions={
+          pay && (
+            <Badge tone={!pay.configured ? "amber" : pay.mode === "live" ? "green" : "blue"}>
+              {!pay.configured ? "Not set up" : pay.mode === "live" ? "Live" : "Test mode"}
+            </Badge>
+          )
+        }
+      >
+        {!pay ? (
+          <p className="text-sm text-neutral-500">Loading…</p>
+        ) : !pay.configured ? (
+          <Notice>Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to the API&apos;s environment in Dokploy and redeploy it.</Notice>
+        ) : (
+          <>
+            <p className="text-sm text-neutral-600">
+              Key <code className="rounded bg-neutral-100 px-1">{pay.keyId}</code>
+              {pay.mode === "test" && <> · test mode: no real money moves; use Razorpay&apos;s test cards or UPI</>}
+            </p>
+            {pay.totals.length > 0 && (
+              <p className="text-sm text-neutral-600">
+                Collected:{" "}
+                {pay.totals.map((t) => `${formatMoney(Number(t.amount), t.currency)} from ${t.paid} enrolment${t.paid === 1 ? "" : "s"}`).join(" · ")}
+              </p>
+            )}
+            {pay.webhookConfigured ? (
+              <p className="text-sm text-green-700">Webhook secret set ✓</p>
+            ) : (
+              <Notice>
+                Recommended: in the Razorpay dashboard → Settings → Webhooks, add <code className="break-all">{pay.webhookUrl}</code> with events
+                payment.captured, order.paid and payment.failed, then put its secret in RAZORPAY_WEBHOOK_SECRET. It confirms payments even if
+                someone closes the page right after paying.
+              </Notice>
+            )}
+          </>
+        )}
+      </Card>
 
       <Card
         title="Email server"

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { api, errorText, json, SITE_URL } from "@/lib/api";
-import { emptyProgramme, PROGRAMME_TYPES, priceLabel, type Category, type Programme, type ProgrammeData, type ProgrammeStatus } from "@/lib/types";
+import { emptyProgramme, formatMoney, PROGRAMME_TYPES, priceLabel, type Category, type Programme, type ProgrammeData, type ProgrammeStatus } from "@/lib/types";
 import { PageHeader } from "@/components/AdminShell";
 import BlockEditor from "@/components/BlockEditor";
 import { Badge, Button, Card, cx, Field, ImageInput, inputClass, Notice, NumberInput, ObjectList, Select, Spinner, StringList, Text, Toggle } from "@/components/ui";
@@ -283,7 +283,7 @@ export default function ProgrammeEditor() {
 
       {tab === "pricing" && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card title="Price" description="Shown as a badge on the card and page.">
+          <Card title="Price" description="Shown on the programme card, its page and the enrol page.">
             <Select
               label="Pricing"
               value={d.pricing.model}
@@ -296,14 +296,44 @@ export default function ProgrammeEditor() {
             />
             {d.pricing.model === "paid" && (
               <>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <NumberInput label="Amount" hint="Leave empty to show the note instead." value={d.pricing.amount} onChange={(amount) => setData({ pricing: { ...d.pricing, amount } })} />
-                  <Text label="Currency" value={d.pricing.currency} onChange={(currency) => setData({ pricing: { ...d.pricing, currency: currency.toUpperCase().slice(0, 3) } })} />
+                <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
+                  <Select
+                    label="Currency"
+                    value={d.pricing.currency === "USD" ? "USD" : "INR"}
+                    onChange={(currency) => setData({ pricing: { ...d.pricing, currency } })}
+                    options={[
+                      { value: "INR", label: "₹ INR" },
+                      { value: "USD", label: "$ USD" },
+                    ]}
+                  />
+                  <NumberInput
+                    label="Price (what people pay)"
+                    hint="e.g. 99. Leave empty to show the price note instead."
+                    value={d.pricing.amount}
+                    onChange={(amount) => setData({ pricing: { ...d.pricing, amount } })}
+                  />
                 </div>
-                <Text label="Price note" placeholder="Fees depend on the plan" value={d.pricing.note} onChange={(note) => setData({ pricing: { ...d.pricing, note } })} />
+                <Toggle
+                  label="Show a strike-through price"
+                  hint="For offers: shows the original price crossed out next to the price."
+                  checked={!!d.pricing.showCompareAt}
+                  onChange={(showCompareAt) => setData({ pricing: { ...d.pricing, showCompareAt } })}
+                />
+                {d.pricing.showCompareAt && (
+                  <NumberInput
+                    label="Original price (crossed out)"
+                    hint="Must be higher than the price, e.g. 199."
+                    value={d.pricing.compareAtAmount ?? null}
+                    onChange={(compareAtAmount) => setData({ pricing: { ...d.pricing, compareAtAmount } })}
+                  />
+                )}
+                <Text label="Price note (optional)" placeholder="Fees depend on the plan" value={d.pricing.note} onChange={(note) => setData({ pricing: { ...d.pricing, note } })} />
               </>
             )}
-            <p className="text-sm text-neutral-500">Badge preview: {price ? <Badge tone={d.pricing.model === "free" ? "green" : "blue"}>{price}</Badge> : "no price badge"}</p>
+            <div className="rounded-lg bg-neutral-50 p-3 text-sm">
+              <span className="text-neutral-500">Preview: </span>
+              <PricePreview pricing={d.pricing} />
+            </div>
           </Card>
           <Card title="After enrolling" description="Sent in the confirmation email to everyone who enrols for this programme." className="lg:col-span-2">
             <Text
@@ -321,14 +351,43 @@ export default function ProgrammeEditor() {
               onChange={(emailNote) => setData({ enrolment: { ...(d.enrolment ?? { whatsappGroupUrl: "" }), emailNote } })}
             />
           </Card>
-          <Card title="Online payment" description="Not connected yet. These details are stored for when a payment provider is chosen.">
-            <Notice>Enrolments for paid programmes are recorded with payment status “Pending”, and you can mark them paid from Enrolments.</Notice>
-            <Toggle label="Collect payment online" hint="Takes effect once a gateway is integrated." checked={d.payment.collectOnline} onChange={(collectOnline) => setData({ payment: { ...d.payment, collectOnline } })} />
-            <Text label="Payment provider" placeholder="e.g. Razorpay, Cashfree, Stripe" value={d.payment.provider} onChange={(provider) => setData({ payment: { ...d.payment, provider } })} />
-            <Text label="Provider product / plan ID" value={d.payment.productRef} onChange={(productRef) => setData({ payment: { ...d.payment, productRef } })} />
+          <Card title="Online payment (Razorpay)" description="Take payment on the enrol page before the enrolment is confirmed.">
+            {d.pricing.model !== "paid" || !d.pricing.amount ? (
+              <Notice>Set Pricing to Paid with a price to collect payment online.</Notice>
+            ) : (
+              <>
+                <Toggle
+                  label="Collect payment online"
+                  hint="The enrol button becomes “Pay & enrol” and opens Razorpay (UPI, cards, netbanking, wallets). Emails are sent once payment succeeds."
+                  checked={d.payment.collectOnline}
+                  onChange={(collectOnline) => setData({ payment: { ...d.payment, collectOnline, provider: "razorpay" } })}
+                />
+                {!d.payment.collectOnline && (
+                  <p className="text-sm text-neutral-500">Off: enrolments are recorded as “Payment pending”, and you collect the fee yourself and mark it paid in Enrolments.</p>
+                )}
+                {d.payment.collectOnline && d.pricing.currency === "USD" && (
+                  <Notice>USD payments need international payments enabled on your Razorpay account.</Notice>
+                )}
+              </>
+            )}
           </Card>
         </div>
       )}
     </>
+  );
+}
+
+function PricePreview({ pricing }: { pricing: ProgrammeData["pricing"] }) {
+  if (pricing.model === "free") return <Badge tone="green">Free</Badge>;
+  if (pricing.model === "hidden") return <span className="text-neutral-500">no price shown</span>;
+  if (pricing.amount == null) return <Badge tone="blue">{pricing.note || "Paid"}</Badge>;
+  const strike = pricing.showCompareAt && pricing.compareAtAmount != null && pricing.compareAtAmount > pricing.amount;
+  const off = strike ? Math.round((1 - pricing.amount / pricing.compareAtAmount!) * 100) : 0;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <strong className="text-base">{formatMoney(pricing.amount, pricing.currency)}</strong>
+      {strike && <s className="text-neutral-400">{formatMoney(pricing.compareAtAmount!, pricing.currency)}</s>}
+      {off > 0 && <Badge tone="green">{off}% off</Badge>}
+    </span>
   );
 }
