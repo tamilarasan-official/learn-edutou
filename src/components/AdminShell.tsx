@@ -25,7 +25,7 @@ const NAV = [
   { href: "/programmes", label: "Programmes", icon: "◆" },
   { href: "/enrolments", label: "Enrolments", icon: "✉", badge: true },
   { href: "/categories", label: "Categories & domains", icon: "☰" },
-  { href: "/settings", label: "Enrol form", icon: "⚙" },
+  { href: "/settings", label: "Enrol form & emails", icon: "⚙" },
 ];
 
 export default function AdminShell({ children }: { children: ReactNode }) {

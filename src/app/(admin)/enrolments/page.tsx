@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorText, json } from "@/lib/api";
-import { PAYMENT_LABEL, STATUS_LABEL, type Enrolment, type EnrolmentStatus, type PaymentStatus } from "@/lib/types";
+import { PAYMENT_LABEL, STATUS_LABEL, type EmailStatus, type Enrolment, type EnrolmentStatus, type PaymentStatus } from "@/lib/types";
 import { PageHeader, useAdmin } from "@/components/AdminShell";
 import { Badge, Button, cx, inputClass, Notice, Spinner } from "@/components/ui";
 
@@ -159,6 +159,9 @@ export default function EnrolmentsPage() {
                         {!r.seen_at && <Badge tone="red">Unread</Badge>}
                         <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
                         {r.payment_status !== "not_required" && <Badge tone={PAY_TONE[r.payment_status]}>Payment: {PAYMENT_LABEL[r.payment_status]}</Badge>}
+                        {r.confirmation_email && r.confirmation_email !== "sent" && (
+                          <Badge tone={r.confirmation_email === "failed" ? "red" : "amber"}>Email {r.confirmation_email === "failed" ? "failed" : "pending"}</Badge>
+                        )}
                       </p>
                       <p className="truncate text-sm text-neutral-500">{r.programme_title}</p>
                     </div>
@@ -167,7 +170,7 @@ export default function EnrolmentsPage() {
                       <p className="text-xs text-neutral-400">{new Date(r.created_at).toLocaleString()}</p>
                     </div>
                   </button>
-                  {isOpen && <EnrolmentDetail r={r} onUpdate={(p) => update(r, p)} onDelete={() => remove(r)} />}
+                  {isOpen && <EnrolmentDetail r={r} onUpdate={(p) => update(r, p)} onDelete={() => remove(r)} onReload={load} />}
                 </li>
               );
             })}
@@ -178,18 +181,60 @@ export default function EnrolmentsPage() {
   );
 }
 
+const EMAIL_LABEL: Record<EmailStatus, string> = { pending: "Waiting to send", sending: "Sending", sent: "Sent", failed: "Failed" };
+const EMAIL_TONE: Record<EmailStatus, "amber" | "green" | "red"> = { pending: "amber", sending: "amber", sent: "green", failed: "red" };
+
+function EmailRow({ label, status }: { label: string; status: EmailStatus | null }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-neutral-600">{label}</span>
+      {status ? <Badge tone={EMAIL_TONE[status]}>{EMAIL_LABEL[status]}</Badge> : <Badge>Not sent</Badge>}
+    </div>
+  );
+}
+
 function EnrolmentDetail({
   r,
   onUpdate,
   onDelete,
+  onReload,
 }: {
   r: Enrolment;
   onUpdate: (p: { status?: EnrolmentStatus; notes?: string; paymentStatus?: PaymentStatus; paymentReference?: string }) => void;
   onDelete: () => void;
+  onReload: () => void;
 }) {
   const [notes, setNotes] = useState(r.notes);
   const [ref, setRef] = useState(r.payment_reference ?? "");
+  const [busy, setBusy] = useState("");
+  const [msg, setMsg] = useState("");
   const wa = `https://wa.me/${r.whatsapp.replace(/\D/g, "")}`;
+
+  const resend = async (kinds: ("confirmation" | "team")[]) => {
+    setBusy("resend");
+    setMsg("");
+    try {
+      await api(`/api/cms/admin/enrolments/${r.id}/resend-email`, json("POST", { kinds }));
+      setMsg("Email queued and sent.");
+      onReload();
+    } catch (e) {
+      setMsg(errorText(e));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const sendWhatsApp = async () => {
+    setBusy("wa");
+    try {
+      const res = await api<{ data: { url: string } }>(`/api/cms/admin/enrolments/${r.id}/whatsapp`);
+      window.open(res.data.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setMsg(errorText(e));
+    } finally {
+      setBusy("");
+    }
+  };
   return (
     <div className="grid gap-4 border-t border-neutral-100 bg-neutral-50 px-4 py-4 text-sm lg:grid-cols-3">
       <dl className="space-y-1.5">
@@ -197,6 +242,21 @@ function EnrolmentDetail({
         <div><dt className="text-xs text-neutral-500">WhatsApp</dt><dd><a href={wa} target="_blank" rel="noreferrer" className="underline">{r.whatsapp}</a></dd></div>
         <div><dt className="text-xs text-neutral-500">Profession · City</dt><dd>{r.profession} · {r.city}</dd></div>
         <div><dt className="text-xs text-neutral-500">Source</dt><dd>{[r.utm_source, r.utm_medium, r.utm_campaign].filter(Boolean).join(" / ") || "Direct"}</dd></div>
+        <div className="space-y-1.5 pt-2">
+          <dt className="text-xs text-neutral-500">Emails</dt>
+          <EmailRow label="Confirmation" status={r.confirmation_email} />
+          <EmailRow label="Team notification" status={r.team_email} />
+          {r.email_error && r.confirmation_email !== "sent" && <p className="text-xs text-red-600">{r.email_error}</p>}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => resend(["confirmation"])}>
+              {busy === "resend" ? "Sending…" : "Resend confirmation"}
+            </Button>
+            <Button size="sm" className="bg-[#25D366] hover:bg-[#1ebe5a]" disabled={!!busy} onClick={sendWhatsApp}>
+              Send WhatsApp
+            </Button>
+          </div>
+          {msg && <p className="text-xs text-neutral-600">{msg}</p>}
+        </div>
       </dl>
       <div className="space-y-2">
         <label className="block text-xs text-neutral-500">Status</label>

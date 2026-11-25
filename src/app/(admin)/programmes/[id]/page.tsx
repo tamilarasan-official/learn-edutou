@@ -305,6 +305,22 @@ export default function ProgrammeEditor() {
             )}
             <p className="text-sm text-neutral-500">Badge preview: {price ? <Badge tone={d.pricing.model === "free" ? "green" : "blue"}>{price}</Badge> : "no price badge"}</p>
           </Card>
+          <Card title="After enrolling" description="Sent in the confirmation email to everyone who enrols for this programme." className="lg:col-span-2">
+            <Text
+              label="WhatsApp group link"
+              placeholder="https://chat.whatsapp.com/…"
+              hint="Shown as a “Join the WhatsApp group” button in the email and after enrolling. Leave empty to use the general link from Enrol form & emails."
+              value={d.enrolment?.whatsappGroupUrl ?? ""}
+              onChange={(whatsappGroupUrl) => setData({ enrolment: { ...(d.enrolment ?? { emailNote: "" }), whatsappGroupUrl } })}
+            />
+            <Text
+              label="Extra note in the confirmation email (optional)"
+              multiline
+              placeholder="e.g. The Zoom link will be shared in the WhatsApp group 1 hour before the session."
+              value={d.enrolment?.emailNote ?? ""}
+              onChange={(emailNote) => setData({ enrolment: { ...(d.enrolment ?? { whatsappGroupUrl: "" }), emailNote } })}
+            />
+          </Card>
           <Card title="Online payment" description="Not connected yet. These details are stored for when a payment provider is chosen.">
             <Notice>Enrolments for paid programmes are recorded with payment status “Pending”, and you can mark them paid from Enrolments.</Notice>
             <Toggle label="Collect payment online" hint="Takes effect once a gateway is integrated." checked={d.payment.collectOnline} onChange={(collectOnline) => setData({ payment: { ...d.payment, collectOnline } })} />

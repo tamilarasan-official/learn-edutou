@@ -49,6 +49,7 @@ export interface ProgrammeData {
   domains: string[];
   type: string;
   pricing: { model: "free" | "paid" | "hidden"; amount: number | null; currency: string; note: string };
+  enrolment: { whatsappGroupUrl: string; emailNote: string };
   payment: { collectOnline: boolean; provider: string; productRef: string };
   schedule: { startDate: string; time: string; duration: string; mode: string; language: string; seats: number | null };
   image: Img;
@@ -132,6 +133,29 @@ export interface Enrolment {
   payment_reference: string | null;
   paid_at: string | null;
   created_at: string;
+  confirmation_email: EmailStatus | null;
+  team_email: EmailStatus | null;
+  email_error: string | null;
+}
+
+export type EmailStatus = "pending" | "sending" | "sent" | "failed";
+
+export interface Notifications {
+  sendConfirmation: boolean;
+  confirmationSubject: string;
+  confirmationIntro: string;
+  confirmationSignoff: string;
+  sendTeam: boolean;
+  teamEmails: string[];
+  whatsappMessage: string;
+}
+
+export interface EmailServerStatus {
+  configured: boolean;
+  from: string;
+  pending: number;
+  failed: number;
+  sent_today: number;
 }
 
 export interface User {
@@ -148,6 +172,7 @@ export const emptyProgramme = (category = ""): ProgrammeData => ({
   domains: [],
   type: "Course",
   pricing: { model: "free", amount: null, currency: "INR", note: "" },
+  enrolment: { whatsappGroupUrl: "", emailNote: "" },
   payment: { collectOnline: false, provider: "", productRef: "" },
   schedule: { startDate: "", time: "", duration: "", mode: "", language: "", seats: null },
   image: { url: "", alt: "", focus: "" },
