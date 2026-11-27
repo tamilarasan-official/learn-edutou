@@ -24,6 +24,7 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: "▦" },
   { href: "/programmes", label: "Programmes", icon: "◆" },
   { href: "/enrolments", label: "Enrolments", icon: "✉", badge: true },
+  { href: "/whatsapp", label: "WhatsApp", icon: "✆" },
   { href: "/analytics", label: "Analytics & Event Tracking", icon: "◔" },
   { href: "/categories", label: "Categories & domains", icon: "☰" },
   { href: "/settings", label: "Enrol form & emails", icon: "⚙" },

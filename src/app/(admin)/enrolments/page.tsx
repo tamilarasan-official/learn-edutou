@@ -246,6 +246,12 @@ function EnrolmentDetail({
           <dt className="text-xs text-neutral-500">Emails</dt>
           <EmailRow label="Confirmation" status={r.confirmation_email} />
           <EmailRow label="Team notification" status={r.team_email} />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-neutral-600">WhatsApp</span>
+            <Badge tone={r.whatsapp_status === "sent" ? "green" : r.whatsapp_status === "failed" ? "red" : r.whatsapp_status ? "amber" : "neutral"}>
+              {r.whatsapp_status === "sent" ? "Sent" : r.whatsapp_status === "pending" || r.whatsapp_status === "sending" ? "Waiting" : r.whatsapp_status === "not_on_whatsapp" ? "Not on WhatsApp" : r.whatsapp_status === "failed" ? "Failed" : r.whatsapp_status === "skipped" ? "Skipped" : "Not queued"}
+            </Badge>
+          </div>
           {r.email_error && r.confirmation_email !== "sent" && <p className="text-xs text-red-600">{r.email_error}</p>}
           <div className="flex flex-wrap gap-1.5 pt-1">
             <Button size="sm" variant="secondary" disabled={!!busy} onClick={() => resend(["confirmation"])}>

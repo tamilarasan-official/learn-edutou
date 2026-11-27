@@ -144,6 +144,7 @@ export interface Enrolment {
   confirmation_email: EmailStatus | null;
   team_email: EmailStatus | null;
   email_error: string | null;
+  whatsapp_status: "pending" | "sending" | "sent" | "failed" | "skipped" | "not_on_whatsapp" | null;
 }
 
 export type EmailStatus = "pending" | "sending" | "sent" | "failed";

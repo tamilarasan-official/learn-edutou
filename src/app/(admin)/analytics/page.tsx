@@ -27,6 +27,8 @@ interface Report {
 interface Settings {
   clarityEnabled: boolean;
   clarityProjectId: string;
+  googleEnabled: boolean;
+  googleTagId: string;
 }
 
 /** Events the website sends to Clarity (see edutou-2026 src/data/analytics.js). */
@@ -145,7 +147,7 @@ export default function AnalyticsPage() {
     try {
       await api("/api/cms/admin/settings/analytics", json("PUT", settings));
       await loadStatus();
-      setNotice(settings.clarityEnabled ? "Saved. Clarity loads on the website for new visitors." : "Saved. Clarity is switched off on the website.");
+      setNotice("Saved. The website uses the new settings for new visitors.");
     } catch (e) {
       setError(errorText(e));
     }
@@ -259,7 +261,10 @@ export default function AnalyticsPage() {
 
       {/* ---------------- Events + setup ---------------- */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Events tracked on the website" description="In Clarity, filter recordings by these under Filters → Custom events, or by the “programme” tag.">
+        <Card
+          title="Events tracked on the website"
+          description="Sent to Clarity (Filters → Custom events, or the “programme” tag) and to Google's dataLayer as { event, programme }, for Tag Manager triggers and GA4 events."
+        >
           <ul className="divide-y divide-neutral-100 text-sm">
             {EVENTS.map((e) => (
               <li key={e.name} className="flex flex-col gap-0.5 py-2 sm:flex-row sm:items-center sm:justify-between">
@@ -288,6 +293,24 @@ export default function AnalyticsPage() {
             <Button disabled={JSON.stringify(settings) === savedSettings} onClick={saveSettings}>Save</Button>
             <Badge tone={status.tokenConfigured ? "green" : "neutral"}>{status.tokenConfigured ? "Data export connected" : "Data export not connected"}</Badge>
           </div>
+        </Card>
+
+        <Card
+          title="Google tag (Analytics / Tag Manager)"
+          actions={<Badge tone={settings.googleEnabled && settings.googleTagId ? "green" : "amber"}>{settings.googleEnabled && settings.googleTagId ? "On" : "Off"}</Badge>}
+        >
+          <Toggle label="Load the Google tag on the website" checked={settings.googleEnabled} onChange={(googleEnabled) => setSettings({ ...settings, googleEnabled })} />
+          <Text
+            label="Tag ID"
+            hint="GTM-… (Tag Manager container) or G-… (Google Analytics 4), from Google's “Set up a Google tag” screen."
+            value={settings.googleTagId}
+            onChange={(googleTagId) => setSettings({ ...settings, googleTagId: googleTagId.trim().toUpperCase() })}
+          />
+          <p className="text-xs text-neutral-500">
+            Reports and setup live in Google: use <a className="underline" href="https://tagmanager.google.com/" target="_blank" rel="noreferrer">Tag Manager</a> and{" "}
+            <a className="underline" href="https://analytics.google.com/" target="_blank" rel="noreferrer">Google Analytics</a>.
+          </p>
+          <Button disabled={JSON.stringify(settings) === savedSettings} onClick={saveSettings}>Save</Button>
         </Card>
       </div>
     </>
