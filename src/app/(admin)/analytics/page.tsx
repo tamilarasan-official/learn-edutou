@@ -302,7 +302,7 @@ export default function AnalyticsPage() {
           <Toggle label="Load the Google tag on the website" checked={settings.googleEnabled} onChange={(googleEnabled) => setSettings({ ...settings, googleEnabled })} />
           <Text
             label="Tag ID"
-            hint="GTM-… (Tag Manager container) or G-… (Google Analytics 4), from Google's “Set up a Google tag” screen."
+            hint="GTM-… (Tag Manager container) or G-… (Google Analytics 4). GTM-MF7QXGND is also built into the website's HTML (Google needs it there to verify the install), so switching off here does not remove that one."
             value={settings.googleTagId}
             onChange={(googleTagId) => setSettings({ ...settings, googleTagId: googleTagId.trim().toUpperCase() })}
           />
